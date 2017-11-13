@@ -3,11 +3,12 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/clbanning/mxj"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
-	filepath "path/filepath"
+	"path/filepath"
 	//	"github.com/hashicorp/hcl"
 	//	"github.com/davecgh/go-spew/spew"
 	shellquote "github.com/kballard/go-shellquote"
@@ -79,6 +80,11 @@ func runShellCommand(cmd string, client *ssh.Client) string {
 	return b.String()
 }
 
+func readFile(fileName string, client *ssh.Client) string {
+	cmd := shellquote.Join("cat", fileName)
+	return runShellCommand(cmd, client)
+}
+
 func main() {
 	flag.Parse()
 	if flag.NArg() > 0 {
@@ -114,6 +120,13 @@ func main() {
 		log.Fatalln("Failed to dial:", err)
 	}
 
+	currentConfigStr := readFile("/var/lib/jenkins/config.xml", client)
+
+	mv, _ := mxj.NewMapXml([]byte(currentConfigStr))
+
+	mv.UpdateValuesForPath("numExecutors:4", "hudson")
+	//	xmlValue, _ := mv.Xml()
+	//	fmt.Println(string(xmlValue))
 	session, err := client.NewSession()
 
 	if err != nil {
