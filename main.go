@@ -42,11 +42,8 @@ func copy(size int64, mode os.FileMode, fileName string, contents io.Reader, des
 	}
 
 	cmd := shellquote.Join("scp", "-t", destination)
-	fmt.Println("calling session start")
-	fmt.Println(cmd)
 	if err := session.Start(cmd); err != nil {
 		w.Close()
-		fmt.Println("encountered error")
 		fmt.Println(err.Error())
 		return err
 	}
@@ -57,23 +54,18 @@ func copy(size int64, mode os.FileMode, fileName string, contents io.Reader, des
 		errors <- session.Wait()
 	}()
 
-	fmt.Println("about to copy")
 	fmt.Fprintf(w, "C%#o %d %s\n", mode, size, fileName)
 	_, copyErr := io.Copy(w, contents)
 	if copyErr != nil {
-		fmt.Println("encountered error whilst copying")
 		fmt.Println(copyErr.Error())
 	}
 	fmt.Fprint(w, "\x00")
 	w.Close()
 
-	returnedErrors := <-errors
-	fmt.Println("errors returned")
-	fmt.Println(returnedErrors)
-	return returnedErrors
+	return <-errors
 }
 
-func runShellCommand(cmd string, client *ssh.Client) {
+func runShellCommand(cmd string, client *ssh.Client) string {
 	session, err := client.NewSession()
 
 	if err != nil {
@@ -84,8 +76,7 @@ func runShellCommand(cmd string, client *ssh.Client) {
 	if err := session.Run(cmd); err != nil {
 		log.Fatal("Failed to run: " + err.Error())
 	}
-	fmt.Println("testing ssh connection")
-	fmt.Println(b.String())
+	return b.String()
 }
 
 func main() {
@@ -129,15 +120,12 @@ func main() {
 		log.Fatalln("Failed to create session: " + err.Error())
 	}
 
-	fmt.Println("About to copy over path")
-
 	dest := "/home/sidharthshanker/blah/blablah/htxt.txt"
 
 	directoryName := filepath.Dir(dest)
 
 	mkdirCommand := shellquote.Join("mkdir", "-p", directoryName)
 	runShellCommand(mkdirCommand, client)
-	fmt.Printf("Destination: %s\n", dest)
 	err = copyPath(f.Name(), dest, session)
 	if err != nil {
 		log.Fatalln("Failed to scp: " + err.Error())
@@ -145,10 +133,8 @@ func main() {
 
 	if _, err := os.Stat(f.Name()); os.IsNotExist(err) {
 		fmt.Printf("no such file or directory: %s", dest)
-	} else {
-		fmt.Println("success")
 	}
-	fmt.Println(dryRun)
+	fmt.Printf("dryRun value: %t\n", dryRun)
 }
 
 func init() {
