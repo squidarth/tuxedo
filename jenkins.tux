@@ -1,0 +1,22 @@
+ssh_settings {
+  host_ip = "35.193.209.57"
+  ssh_username = "sidharthshanker"
+  path_to_key = "~/.ssh/id_rsa"
+}
+
+security {
+  disable_signup = false
+  disable_remember_me = false
+}
+
+general {
+  jenkins_dir = "/var/lib/jenkins"
+  num_executors = 2
+  workspace_dir = "${JENKINS_HOME}/workspace/${ITEM_FULLNAME}"
+}
+
+
+# Potential options for Plugins
+
+## Option 1: One block per plugin
+plugin "
