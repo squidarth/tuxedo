@@ -63,10 +63,10 @@ func copy(size int64, mode os.FileMode, fileName string, contents io.Reader, des
 		return err
 	}
 
-	errors := make(chan error)
+	errors := make(chan error) //  Creates channel over which the goroutine can communicate
 
 	go func() {
-		errors <- session.Wait()
+		errors <- session.Wait() // write to errors
 	}()
 
 	fmt.Fprintf(w, "C%#o %d %s\n", mode, size, fileName)
@@ -77,7 +77,7 @@ func copy(size int64, mode os.FileMode, fileName string, contents io.Reader, des
 	fmt.Fprint(w, "\x00")
 	w.Close()
 
-	return <-errors
+	return <-errors // receive from errors
 }
 
 func runShellCommand(cmd string, client *ssh.Client) string {
