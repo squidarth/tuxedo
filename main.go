@@ -8,7 +8,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
+  "strconv"
+//	"path/filepath"
 	//	"github.com/hashicorp/hcl"
 	//	"github.com/davecgh/go-spew/spew"
 	shellquote "github.com/kballard/go-shellquote"
@@ -85,33 +86,117 @@ func readFile(fileName string, client *ssh.Client) string {
 	return runShellCommand(cmd, client)
 }
 
+func redString(str string) string {
+  return "\u001b[31m" + str + "\u001b[0m"
+}
+
+func greenString(str string) string {
+  return "\u001b[32m" + str + "\u001b[0m"
+}
+
+func handleSecuritySettingsDryRun(client *ssh.Client, securitySettings *Security) (string, error) {
+	currentConfigStr := readFile("/var/lib/jenkins/config.xml", client)
+	mv, _ := mxj.NewMapXml([]byte(currentConfigStr))
+
+  diff := ""
+
+  disableSignupValues, err := mv.ValuesForKey("disableSignup")
+  if err != nil {
+    fmt.Println("Couldn't get disableSignup")
+    return "", err
+  }
+
+  disableSignup := disableSignupValues[0].(string)
+  if strconv.FormatBool(securitySettings.DisableSignup) != disableSignup {
+    diff += greenString("+ disable_signup " + strconv.FormatBool(securitySettings.DisableSignup)) + redString("\n- disable_signup " + disableSignup) + "\n"
+  }
+
+  disableRememberMeValues, err := mv.ValuesForKey("disableRememberMe")
+  if err != nil {
+    fmt.Println("Couldn't get disableSignup")
+    return "", err
+  }
+
+  disableRememberMe := disableRememberMeValues[0].(string)
+  if strconv.FormatBool(securitySettings.DisableSignup) != disableRememberMe {
+    diff += greenString("+ disable_remember_me " + strconv.FormatBool(securitySettings.DisableSignup)) + redString("\n- disable_remember_me " + disableRememberMe) + "\n"
+  }
+
+
+  if diff != "" {
+    diff = "security\n" + diff
+  }
+
+  return diff, nil
+
+}
+
+func handleGeneralSettingsDryRun(client *ssh.Client, generalSettings *General) (string, error) {
+
+	currentConfigStr := readFile("/var/lib/jenkins/config.xml", client)
+	mv, _ := mxj.NewMapXml([]byte(currentConfigStr))
+  values, err := mv.ValuesForKey("numExecutors")
+  if err != nil {
+    fmt.Println("Couldn't get NumExecutors")
+    return "", err
+  }
+
+  diff := ""
+
+  numExecutors := values[0].(string)
+  if strconv.Itoa(generalSettings.NumExecutors) != numExecutors {
+    diff += greenString("+ num_executors " + strconv.Itoa(generalSettings.NumExecutors)) + redString("\n- num_executors " + numExecutors) + "\n"
+  }
+
+
+  workspaceDirValues, err := mv.ValuesForKey("workspaceDir")
+  if err != nil {
+    fmt.Println("Couldn't get workspaceDir")
+    return "", err
+  }
+
+  workspaceDir := workspaceDirValues[0].(string)
+  if generalSettings.WorkspaceDir != workspaceDir {
+    diff += greenString("+ workspace_dir " + generalSettings.WorkspaceDir) + redString("\n- workspace_dir " + workspaceDir) + "\n"
+  }
+
+  if diff != "" {
+    diff = "general\n" + diff
+  }
+
+  return diff, nil
+	//  mv.UpdateValuesForPath("numExecutors:4", "hudson")
+  //	xmlValue, _ := mv.Xml()
+  //	fmt.Println(string(xmlValue))
+}
+
 func main() {
 	flag.Parse()
 	if flag.NArg() > 0 {
 		flag.Usage()
 		os.Exit(1)
 	}
-	f, _ := ioutil.TempFile("", "")
-	fmt.Fprintln(f, "hello world")
-	f.Close()
-	//	defer os.Remove(f.Name())
-	//	defer os.Remove(f.Name() + "-copy")
 
-	//	agent, err := getAgent()
-	//	if err != nil {
-	//		log.Fatalln("Failed to connect to SSH_AUTH_SOCK:", err)
-	//	}
 
-	privateKey, err := ioutil.ReadFile("/Users/fin/.ssh/id_rsa")
+  tuxContent, err := ioutil.ReadFile("jenkins.tux")
+	if err != nil {
+		fmt.Println("Failed to find a jenkins.tux file.")
+	}
+
+  config, err := parseTux(string(tuxContent))
+  if err != nil {
+		fmt.Println("Theres an error in the tux config.")
+  }
+
+	privateKey, err := ioutil.ReadFile(config.SSHSettingsConfig.PathToKey)
 	signer, err := ssh.ParsePrivateKey(privateKey)
 	if err != nil {
 		fmt.Println("Failed to parse the private key file")
 		fmt.Println(err.Error())
 	}
 
-  fmt.Println("Dialing ssh")
-	client, err := ssh.Dial("tcp", "35.193.201.174:22", &ssh.ClientConfig{
-		User: "sidshanker",
+  client, err := ssh.Dial("tcp", config.SSHSettingsConfig.HostIp + ":22", &ssh.ClientConfig{
+		User: config.SSHSettingsConfig.SSHUsername,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
@@ -121,13 +206,27 @@ func main() {
 		log.Fatalln("Failed to dial:", err)
 	}
 
-	currentConfigStr := readFile("/var/lib/jenkins/config.xml", client)
+  if (dryRun) {
+    generalDiff, err := handleGeneralSettingsDryRun(client, &config.GeneralConfig)
+    if err != nil {
+      fmt.Println("Failed parsing general settings")
+      return
+    }
 
-	mv, _ := mxj.NewMapXml([]byte(currentConfigStr))
+    securityDiff, err := handleSecuritySettingsDryRun(client, &config.SecurityConfig)
+    if err != nil {
+      fmt.Println("Failed parsing security settings")
+      return
+    }
 
-	mv.UpdateValuesForPath("numExecutors:4", "hudson")
-	xmlValue, _ := mv.Xml()
-	fmt.Println(string(xmlValue))
+    diff := generalDiff + securityDiff
+    if diff == "" {
+      fmt.Println("No changes.")
+    } else {
+      fmt.Println("Tuxedo Changes:\n\n" + diff)
+    }
+  }
+/*
 	session, err := client.NewSession()
 
 	if err != nil {
@@ -151,7 +250,7 @@ func main() {
 	if _, err := os.Stat(f.Name()); os.IsNotExist(err) {
 		fmt.Printf("no such file or directory: %s", dest)
 	}
-	fmt.Printf("dryRun value: %t\n", dryRun)
+  */
 }
 
 func init() {

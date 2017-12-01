@@ -1,22 +1,20 @@
 ssh_settings {
   host_ip = "35.193.201.174"
-  ssh_username = "sidharthshanker"
+  ssh_username = "sidshanker"
   path_to_key = "/Users/fin/.ssh/id_rsa"
 }
 
 security {
   disable_signup = false
-  disable_remember_me = false
+  disable_remember_me = true
 }
 
 general {
   jenkins_dir = "/var/lib/jenkins"
-  num_executors = 2
-  workspace_dir = "${JENKINS_HOME}/workspace/${ITEM_FULLNAME}"
+  num_executors = 3
+  workspace_dir = "${JENKINS_HOME}/workspace/${ITEM_FULLNAME}/sd"
 }
 
-
-# Potential options for Plugins
-
-## Option 1: One block per plugin
-plugin "
+//plugin {
+//  name = "AWS Lambda Plugin"
+//}
