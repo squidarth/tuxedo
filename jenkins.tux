@@ -1,7 +1,7 @@
 ssh_settings {
-  host_ip = "35.193.209.57"
+  host_ip = "35.193.201.174"
   ssh_username = "sidharthshanker"
-  path_to_key = "~/.ssh/id_rsa"
+  path_to_key = "/Users/fin/.ssh/id_rsa"
 }
 
 security {

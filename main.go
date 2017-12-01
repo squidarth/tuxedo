@@ -42,7 +42,7 @@ func copy(size int64, mode os.FileMode, fileName string, contents io.Reader, des
 		return err
 	}
 
-	cmd := shellquote.Join("scp", "-t", destination)
+	cmd := shellquote.Join("sudo", "scp", "-t", destination)
 	if err := session.Start(cmd); err != nil {
 		w.Close()
 		fmt.Println(err.Error())
@@ -102,15 +102,16 @@ func main() {
 	//		log.Fatalln("Failed to connect to SSH_AUTH_SOCK:", err)
 	//	}
 
-	privateKey, err := ioutil.ReadFile("/Users/sidharthshanker/.ssh/id_rsa")
+	privateKey, err := ioutil.ReadFile("/Users/fin/.ssh/id_rsa")
 	signer, err := ssh.ParsePrivateKey(privateKey)
 	if err != nil {
 		fmt.Println("Failed to parse the private key file")
 		fmt.Println(err.Error())
 	}
 
-	client, err := ssh.Dial("tcp", "35.193.209.57:22", &ssh.ClientConfig{
-		User: os.Getenv("USER"),
+  fmt.Println("Dialing ssh")
+	client, err := ssh.Dial("tcp", "35.193.201.174:22", &ssh.ClientConfig{
+		User: "sidshanker",
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
@@ -125,20 +126,23 @@ func main() {
 	mv, _ := mxj.NewMapXml([]byte(currentConfigStr))
 
 	mv.UpdateValuesForPath("numExecutors:4", "hudson")
-	//	xmlValue, _ := mv.Xml()
-	//	fmt.Println(string(xmlValue))
+	xmlValue, _ := mv.Xml()
+	fmt.Println(string(xmlValue))
 	session, err := client.NewSession()
 
 	if err != nil {
 		log.Fatalln("Failed to create session: " + err.Error())
 	}
 
-	dest := "/home/sidharthshanker/blah/blablah/htxt.txt"
+	dest := "/home/sidshanker/blah/blablah/htxt.txt"
 
 	directoryName := filepath.Dir(dest)
 
-	mkdirCommand := shellquote.Join("mkdir", "-p", directoryName)
+	mkdirCommand := shellquote.Join("sudo", "mkdir", "-p", directoryName)
+
+  fmt.Println("Running mkdir")
 	runShellCommand(mkdirCommand, client)
+  fmt.Println("About to scp")
 	err = copyPath(f.Name(), dest, session)
 	if err != nil {
 		log.Fatalln("Failed to scp: " + err.Error())
