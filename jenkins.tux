@@ -5,14 +5,14 @@ ssh_settings {
 }
 
 security {
-  disable_signup = false
+  disable_signup = true
   disable_remember_me = true
 }
 
 general {
   jenkins_dir = "/var/lib/jenkins"
   num_executors = 3
-  workspace_dir = "${JENKINS_HOME}/workspace/${ITEM_FULLNAME}/sd"
+  workspace_dir = "${JENKINS_HOME}/workspace/${ITEM_FULLNAME}"
 }
 
 //plugin {
