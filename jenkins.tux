@@ -11,7 +11,7 @@ security {
 
 general {
   jenkins_dir = "/var/lib/jenkins"
-  num_executors = 3
+  num_executors = 2
   workspace_dir = "${JENKINS_HOME}/workspace/${ITEM_FULLNAME}"
 }
 

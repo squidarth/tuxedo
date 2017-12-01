@@ -95,6 +95,8 @@ func main() {
       return
     }
 
+    runShellCommand("sudo service jenkins restart", client)
+
     fmt.Println("Changes Applied")
   }
 }
