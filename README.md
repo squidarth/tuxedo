@@ -1,6 +1,6 @@
 # tuxedo
 
-Config file configuration for Jenkins instances.
+Config file configuration for [Jenkins](https://jenkins-ci.org/) instances.
 
 ### Summary
 
